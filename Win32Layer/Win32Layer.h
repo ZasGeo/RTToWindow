@@ -6,15 +6,15 @@ struct Win32OffScreenBuffer
 {
     BITMAPINFO m_Info = {};
     void* m_Memory = NULL;
-    int m_Width = 0;
-    int m_Height = 0;
-    int m_BytesPerPixel = 0;
+    uint32_t m_Width = 0;
+    uint32_t m_Height = 0;
+    uint32_t m_BytesPerPixel = 0;
 };
 
 struct Win32WindowDimension
 {
-    int m_Width;
-    int m_Height;
+    uint32_t m_Width;
+    uint32_t m_Height;
 };
 
 struct Win32GameCode

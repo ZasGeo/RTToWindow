@@ -18,6 +18,13 @@ void UpdateAndRender(GameMemory* gameMemory, GameInput* gameInput, EngineOffScre
     dummy->m_xOffset += 2.0f * gameInput->m_KeyboardMouseController.m_MoveAxisX;
     dummy->m_yOffset += 2.0f * gameInput->m_KeyboardMouseController.m_MoveAxisY;
 
-    ClearBuffer(outBuffer, 0x000000);
-    DrawRectangle(outBuffer, 300 + dummy->m_xOffset, 300 + dummy->m_yOffset, 400 + dummy->m_xOffset, 400 + dummy->m_yOffset, 0x0000FF);
+    ClearBuffer(outBuffer, Color{ 0.0f, 0.0f, 0.0f });
+
+    Rectangle rectPos;
+    rectPos.startX = 300 + dummy->m_xOffset;
+    rectPos.startY = 300 + dummy->m_yOffset;
+    rectPos.endX = 400 + dummy->m_xOffset;
+    rectPos.endY = 400 + dummy->m_yOffset;
+
+    DrawRectangle(outBuffer, rectPos, Color{ 1.0f, 0.0f, 0.0f });
 }

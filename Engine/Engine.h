@@ -12,9 +12,9 @@ constexpr int MaxGamePadControllersNum = 4;
 struct EngineOffScreenBuffer
 {
     void* m_Memory = nullptr;
-    int m_Width = 0;
-    int m_Height = 0;
-    int m_BytesPerPixel = 0;
+    uint32_t m_Width = 0;
+    uint32_t m_Height = 0;
+    uint32_t m_BytesPerPixel = 0;
 };
 
 struct ButtonState
