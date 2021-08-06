@@ -97,6 +97,7 @@ Win32GameCode Win32LoadGameCode()
         {
             result.m_LastWriteTime = Win32GetLastWriteTime("Engine.dll");
             result.UpdateAndRender = ((UpdateAndRenderSignature*)GetProcAddress(result.m_Module, "UpdateAndRender"));
+            result.Initialize = ((InitializeSignature*)GetProcAddress(result.m_Module, "Initialize"));
         }
     }
 
@@ -111,6 +112,7 @@ void Win32UnloadGameCode(Win32GameCode* gameCode)
         gameCode->m_Module = NULL;
     }
     gameCode->UpdateAndRender = UpdateAndRenderStub;
+    gameCode->Initialize = nullptr;
 }
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -121,7 +123,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
     {
         Win32WindowDimension dimension = Win32GetWinDimension(hWnd);
-        Win32ResizeOffScreenBuffer(&g_BackBuffer, dimension.m_Width, dimension.m_Height);
+        Win32ResizeOffScreenBuffer(&g_BackBuffer, 960, 540);
     }
     break;
     case WM_DESTROY:
@@ -221,6 +223,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     GameInput input[2] = {};
     GameInput* newInput = &input[0];
     GameInput* oldInput = &input[1];
+
+    gameCode.Initialize(&gameMemory);
 
     g_Running = true;
     while (g_Running)

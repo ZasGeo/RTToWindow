@@ -22,4 +22,5 @@ struct Win32GameCode
     HMODULE m_Module;
     FILETIME m_LastWriteTime;
     UpdateAndRenderSignature* UpdateAndRender;
+    InitializeSignature* Initialize;
 };

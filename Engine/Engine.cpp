@@ -1,36 +1,23 @@
-#include "Engine.h"
 #include <cstdint>
+#include <Engine/Engine.h>
+#include <Rendering/SimpleRenders.h>
 
-static int g_XOffset;
-static int g_YOffset;
-
-void RenderGradient(EngineOffScreenBuffer* outBuffer)
+void Initialize(GameMemory* gameMemory)
 {
-    uint8_t* row = static_cast<uint8_t*>(outBuffer->m_Memory);
-    for (int rowIndex = 0; rowIndex < outBuffer->m_Height; ++rowIndex)
-    {
-        uint32_t* pixel = reinterpret_cast<uint32_t*>(row);
-        for (int columnIndex = 0; columnIndex < outBuffer->m_Width; ++columnIndex)
-        {
-            const uint8_t blue = static_cast<uint8_t>(rowIndex + g_YOffset);
-            const uint8_t green = static_cast<uint8_t>(columnIndex + g_XOffset);
-            *(pixel++) = green << 8 | blue;
-        }
-
-        row += outBuffer->m_Width * outBuffer->m_BytesPerPixel;
-    }
+    GameState* dummy = (GameState*)(gameMemory->m_PersistentStorage);
+    dummy->m_xOffset = 0;
+    dummy->m_yOffset = 0;
 }
 
 void UpdateAndRender(GameMemory* gameMemory, GameInput* gameInput, EngineOffScreenBuffer* outBuffer)
 {
-    g_XOffset += static_cast<int>(4 * gameInput->m_ControllersInput[0].m_MoveAxisX);
-    g_YOffset += static_cast < int>(4 * gameInput->m_ControllersInput[0].m_MoveAxisY);
+    GameState* dummy = (GameState*)(gameMemory->m_PersistentStorage);
+    dummy->m_xOffset += 2.0f * gameInput->m_ControllersInput[0].m_MoveAxisX;
+    dummy->m_yOffset += 2.0f * gameInput->m_ControllersInput[0].m_MoveAxisY;
 
-    g_XOffset += static_cast<int>(4 * gameInput->m_KeyboardMouseController.m_MoveAxisX);
-    g_YOffset += static_cast <int>(4 * gameInput->m_KeyboardMouseController.m_MoveAxisY);
+    dummy->m_xOffset += 2.0f * gameInput->m_KeyboardMouseController.m_MoveAxisX;
+    dummy->m_yOffset += 2.0f * gameInput->m_KeyboardMouseController.m_MoveAxisY;
 
-    g_XOffset += static_cast<int>(4 * gameInput->m_KeyboardMouseController.m_TurnAxisX);
-    g_YOffset += static_cast <int>(4 * gameInput->m_KeyboardMouseController.m_TurnAxisY);
-
-    RenderGradient(outBuffer);
+    ClearBuffer(outBuffer, 0x000000);
+    DrawRectangle(outBuffer, 300 + dummy->m_xOffset, 300 + dummy->m_yOffset, 400 + dummy->m_xOffset, 400 + dummy->m_yOffset, 0x0000FF);
 }

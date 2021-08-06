@@ -15,3 +15,4 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # Include sub-projects.
 add_subdirectory ("Win32Layer")
 add_subdirectory ("Engine")
+add_subdirectory ("Rendering")

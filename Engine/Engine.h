@@ -54,6 +54,14 @@ struct GameMemory
     void* m_TransientStorage;
 };
 
-typedef void UpdateAndRenderSignature(GameMemory* gameMemory, GameInput* gameInput, EngineOffScreenBuffer* outBuffer);
+struct GameState
+{
+    float m_xOffset;
+    float m_yOffset;
+};
 
+typedef void InitializeSignature(GameMemory* gameMemory);
+extern "C"  void Initialize(GameMemory* gameMemory);
+
+typedef void UpdateAndRenderSignature(GameMemory* gameMemory, GameInput* gameInput, EngineOffScreenBuffer* outBuffer);
 extern "C" void UpdateAndRender(GameMemory* gameMemory, GameInput * gameInput, EngineOffScreenBuffer* outBuffer);
