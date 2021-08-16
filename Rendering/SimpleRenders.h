@@ -1,14 +1,8 @@
 #pragma once
 
-#include <Engine/Engine.h>
+#include <Engine/Engine_platform.h>
+#include <Math/Vector2.hpp>
 
-struct Rectangle
-{
-    float startX;
-    float startY;
-    float endX;
-    float endY;
-};
 
 struct Color
 {
@@ -19,4 +13,4 @@ struct Color
 
 void RenderGradient(EngineOffScreenBuffer* outBuffer);
 void ClearBuffer(EngineOffScreenBuffer* outBuffer, Color color);
-void DrawRectangle(EngineOffScreenBuffer* outBuffer, Rectangle rect, Color color);
+void DrawRectangle(EngineOffScreenBuffer* outBuffer, Vector2 leftBottom, Vector2 rightUp, Color color);

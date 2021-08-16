@@ -5,12 +5,44 @@
 #include <windowsx.h>
 #include <Xinput.h>
 #include <cstdint>
+#include <stdio.h>
 
 #include <Win32Layer/Win32Layer.h>
-#include <Engine/Engine.h>
+#include <Engine/Engine_platform.h>
 
 static bool g_Running;
 static Win32OffScreenBuffer g_BackBuffer;
+static WINDOWPLACEMENT g_WindowPosition = { sizeof(g_WindowPosition) };
+static LARGE_INTEGER g_PerfCountFrequency;
+
+void Win32ToggleFullscreen(HWND window)
+{
+    // http://blogs.msdn.com/b/oldnewthing/archive/2010/04/12/9994016.aspx
+
+    DWORD style = GetWindowLong(window, GWL_STYLE);
+    if (style & WS_OVERLAPPEDWINDOW)
+    {
+        MONITORINFO monitorInfo = { sizeof(monitorInfo) };
+        if (GetWindowPlacement(window, &g_WindowPosition) &&
+            GetMonitorInfo(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY), &monitorInfo))
+        {
+            SetWindowLong(window, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
+            SetWindowPos(window, HWND_TOP,
+                monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.top,
+                monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
+                monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top,
+                SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+        }
+    }
+    else
+    {
+        SetWindowLong(window, GWL_STYLE, style | WS_OVERLAPPEDWINDOW);
+        SetWindowPlacement(window, &g_WindowPosition);
+        SetWindowPos(window, 0, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+            SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+    }
+}
 
 Win32WindowDimension Win32GetWinDimension(HWND window)
 {
@@ -33,6 +65,8 @@ void Win32ResizeOffScreenBuffer(Win32OffScreenBuffer* buffer, const int width, c
     buffer->m_Width = width;
     buffer->m_Height = height;
     buffer->m_BytesPerPixel = 4;
+    buffer->m_Pitch = width * buffer->m_BytesPerPixel;
+    buffer->m_AspectRatio = static_cast<float>(width) / height;
 
     buffer->m_Info.bmiHeader.biSize = sizeof(buffer->m_Info.bmiHeader);
     buffer->m_Info.bmiHeader.biWidth = width;
@@ -45,11 +79,38 @@ void Win32ResizeOffScreenBuffer(Win32OffScreenBuffer* buffer, const int width, c
     buffer->m_Memory = VirtualAlloc(0, bitMapSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 }
 
-void Win32PresentBufferToWindow(Win32OffScreenBuffer buffer, HDC deviceContext, int width, int height)
+void Win32PresentBufferToWindow(Win32OffScreenBuffer buffer, HDC deviceContext, uint32_t width, uint32_t height)
 {
+    const float windowAspect = static_cast<float>(width) / height;
+
+    const float heightAspected = buffer.m_AspectRatio * height;
+
+    uint32_t newWidth = width;
+    uint32_t newHeight = height;
+    uint32_t offsetX = 0;
+    uint32_t offsetY = 0;
+    if (windowAspect >= buffer.m_AspectRatio)
+    {
+        const float widthMult = heightAspected / width;
+        newWidth = static_cast<uint32_t>(width * widthMult);
+        offsetX = (width - newWidth) / 2;
+        
+        PatBlt(deviceContext, 0, 0, offsetX, height, BLACKNESS);
+        PatBlt(deviceContext, width - offsetX, 0, offsetX, height, BLACKNESS);
+    }
+    else
+    {
+        const float heightMult = width / heightAspected;
+        newHeight = static_cast<uint32_t>(height * heightMult);
+        offsetY = (height - newHeight) / 2;
+
+        PatBlt(deviceContext, 0, 0, width, offsetY, BLACKNESS);
+        PatBlt(deviceContext, 0, height - offsetY, width, offsetY, BLACKNESS);
+    }
+
     StretchDIBits(
         deviceContext,
-        0, 0, width, height,
+        offsetX, offsetY, newWidth, newHeight,
         0, 0, buffer.m_Width, buffer.m_Height,
         buffer.m_Memory,
         &buffer.m_Info,
@@ -70,8 +131,21 @@ float Win32GetXInputStickValue(SHORT inValue, SHORT deadZone)
     return ((static_cast<float>(valueDeadZoned) + 32768.0f) / 65535.0f) * 2.0f - 1.0f;
 }
 
-void UpdateAndRenderStub(GameMemory* gameMemory, GameInput* gameInput, EngineOffScreenBuffer* outBuffer)
+void UpdateAndRenderStub(float dt, GameMemory* gameMemory, GameInput* gameInput, EngineOffScreenBuffer* outBuffer)
 {
+}
+
+LARGE_INTEGER Win32GetWallClock()
+{
+    LARGE_INTEGER result;
+    QueryPerformanceCounter(&result);
+    return result;
+}
+
+float Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
+{
+    float result = static_cast<float>(End.QuadPart - Start.QuadPart) / g_PerfCountFrequency.QuadPart;
+    return result;
 }
 
 FILETIME Win32GetLastWriteTime(const char* filename)
@@ -195,7 +269,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     GameMemory gameMemory = {};
     gameMemory.m_PersistentMemorySize = MEGABYTES(64ull);
-    gameMemory.m_TransientMemorySize = GIGABYTES(4ull);
+    gameMemory.m_TransientMemorySize = GIGABYTES(1ull);
     gameMemory.m_PersistentStorage = VirtualAlloc(gameMemoryStartAdress, gameMemory.m_PersistentMemorySize + gameMemory.m_TransientMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     gameMemory.m_TransientStorage = static_cast<char*>(gameMemory.m_PersistentStorage) + gameMemory.m_PersistentMemorySize;
 
@@ -213,12 +287,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
     }
 
+    QueryPerformanceFrequency(&g_PerfCountFrequency);
 
-    LARGE_INTEGER perfCounterFrequency;
-    QueryPerformanceFrequency(&perfCounterFrequency);
-
-    LARGE_INTEGER lastCounter;
-    QueryPerformanceCounter(&lastCounter);
+    LARGE_INTEGER lastCounter = Win32GetWallClock();
 
     GameInput input[2] = {};
     GameInput* newInput = &input[0];
@@ -226,6 +297,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     gameCode.Initialize(&gameMemory);
 
+    uint64_t lastCycleCount = __rdtsc();
+
+    float dt = 0.0f;
     g_Running = true;
     while (g_Running)
     {
@@ -248,6 +322,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             case WM_SYSKEYDOWN:
             case WM_SYSKEYUP:
             {
+                const bool altKeyWasDown = (message.lParam & (1 << 29)) != 0;
                 const bool wasDown = (message.lParam & (static_cast<LPARAM>(1) << 30)) != 0;
                 const bool isDown = (message.lParam & (static_cast<LPARAM>(1) << 31)) == 0;
                 if (isDown != wasDown)
@@ -266,6 +341,17 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                     case 'A':
                         newInput->m_KeyboardMouseController.m_MoveAxisX += isDown ? -1.0f : 1.0f;
                         break;
+                    case VK_RETURN:
+                        if (isDown && altKeyWasDown)
+                        {
+                            Win32ToggleFullscreen(windowHandle);
+                        }
+                        break;
+                    case VK_F4:
+                        if (isDown && altKeyWasDown)
+                        {
+                            g_Running = false;
+                        };
                     default:
                         break;
                     }
@@ -320,26 +406,30 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         offscreenBuffer.m_Width = g_BackBuffer.m_Width;
         offscreenBuffer.m_Height = g_BackBuffer.m_Height;
         offscreenBuffer.m_BytesPerPixel = g_BackBuffer.m_BytesPerPixel;
-        gameCode.UpdateAndRender(&gameMemory, newInput, &offscreenBuffer);
+        offscreenBuffer.m_Pitch = g_BackBuffer.m_Pitch;
+        offscreenBuffer.m_AspectRatio = g_BackBuffer.m_AspectRatio;
+        gameCode.UpdateAndRender(dt, &gameMemory, newInput, &offscreenBuffer);
 
         Win32WindowDimension dimension =  Win32GetWinDimension(windowHandle);     
         Win32PresentBufferToWindow(g_BackBuffer, deviceContext, dimension.m_Width, dimension.m_Height);
 
-        LARGE_INTEGER endCounter;
-        QueryPerformanceCounter(&endCounter);
-
-        int64_t counterDifference = endCounter.QuadPart - lastCounter.QuadPart;
-        int32_t msPerSec = static_cast<int32_t>((1000 * counterDifference) / perfCounterFrequency.QuadPart);
-
-        char buffer[128];
-        wsprintfA(buffer, "ms per frame: %dms\n", msPerSec);
-        OutputDebugStringA(buffer);
-
-        lastCounter = endCounter;
-
         GameInput* tmpInput = oldInput;
         oldInput = newInput;
         newInput = tmpInput;
+
+        LARGE_INTEGER endCounter = Win32GetWallClock();;
+        dt = Win32GetSecondsElapsed(lastCounter, endCounter);
+        lastCounter = endCounter;
+ 
+        uint64_t endCycleCount = __rdtsc();
+        uint64_t cyclesElapsed = endCycleCount - lastCycleCount;
+        lastCycleCount = endCycleCount;
+ 
+        const double megaCyclesPerFrame = static_cast<double>(cyclesElapsed) / (1000.0 * 1000.0);
+        const double msPerFrame = 1000.0 * dt;
+        char fpsBuffer[256];
+        _snprintf_s(fpsBuffer, sizeof(fpsBuffer), "%.03fms/f,  %.02fmc/f\n", msPerFrame, megaCyclesPerFrame);
+        OutputDebugStringA(fpsBuffer);
     }
 
     //no, you don't need to clear any resource here

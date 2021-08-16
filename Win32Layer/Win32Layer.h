@@ -1,14 +1,16 @@
 #pragma once
 #include <Windows.h>
-#include <Engine/Engine.h>
+#include <Engine/Engine_platform.h>
 
 struct Win32OffScreenBuffer
 {
-    BITMAPINFO m_Info = {};
-    void* m_Memory = NULL;
-    uint32_t m_Width = 0;
-    uint32_t m_Height = 0;
-    uint32_t m_BytesPerPixel = 0;
+    BITMAPINFO m_Info;
+    void* m_Memory;
+    uint32_t m_Width;
+    uint32_t m_Height;
+    uint32_t m_BytesPerPixel;
+    uint32_t m_Pitch;
+    float m_AspectRatio;
 };
 
 struct Win32WindowDimension

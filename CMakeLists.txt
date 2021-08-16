@@ -6,8 +6,11 @@ cmake_minimum_required (VERSION 3.8)
 project ("RTToWindow")
 
 add_definitions(-DINTERNAL_USAGE_BUILD)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  add_definitions(-DCOMPILER_MSVC)
+endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX /wd4100 /GR- /EHa- /EHs- /EHc- /Oi /Od")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX /wd4100 /wd4189 /GR- /EHa- /EHs- /EHc- /Oi /Od")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -opt:ref") #remove shit from exe
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -opt:ref") #removeshit from dll
 
