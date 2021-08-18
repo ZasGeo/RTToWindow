@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <Math/Math.hpp>
 
 struct Vector2
@@ -47,6 +48,13 @@ inline Vector2 operator*(float scalar, Vector2 vec)
     return vec * scalar;
 }
 
+inline Vector2 operator/(Vector2 vec, float scalar)
+{
+    float recip = 1.0f / scalar;
+    Vector2 result = vec * recip;
+    return result;
+}
+
 inline Vector2 operator-(Vector2 vec)
 {
     Vector2 result;
@@ -79,15 +87,39 @@ inline Vector2& operator*=(Vector2& operand, float value)
     return operand;
 }
 
-inline float Dot2(Vector2 a, Vector2 b)
+inline Vector2& operator/=(Vector2& operand, float value)
+{
+    operand = operand / value;
+    return operand;
+}
+
+inline float Dot(Vector2 a, Vector2 b)
 {
     float result = a.x * b.x + a.y * b.y;
     return result;
 }
 
-inline Vector2 Reflect2(Vector2 vec, Vector2 normal)
+inline float LengthSq(Vector2 vec)
 {
-    //#TODO assert on normal len = 1
-    Vector2 result = vec - 2.0f * Dot2(vec, normal) * normal;
+    return Dot(vec, vec);
+}
+
+inline float Length(Vector2 vec)
+{
+    float result = SquareRoot(LengthSq(vec));
+    return result;
+}
+
+inline Vector2 Reflect(Vector2 vec, Vector2 normal)
+{
+    assert(EqualWithEpsilion(LengthSq(normal), 1.0f));
+    Vector2 result = vec - 2.0f * Dot(vec, normal) * normal;
+    return result;
+}
+
+inline Vector2 GetNormilized(Vector2 vec)
+{
+    float len = Length(vec);
+    Vector2 result = EqualWithEpsilion(len, 0.0f) ? vec : vec / len;
     return result;
 }

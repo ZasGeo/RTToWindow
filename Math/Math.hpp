@@ -24,3 +24,8 @@ inline bool EqualWithEpsilion(float a, float b)
 {
     return fabsf(a - b) <= EPSILION;
 }
+
+inline float SquareRoot(float value)
+{
+    return sqrtf(value);
+}

@@ -32,11 +32,16 @@ void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, Eng
 
     Vector2 playerAcceleration = {
         gameInput->m_ControllersInput[0].m_MoveAxisX + gameInput->m_KeyboardMouseController.m_MoveAxisX,
-        gameInput->m_ControllersInput[0].m_MoveAxisY + gameInput->m_KeyboardMouseController.m_MoveAxisY };
+        gameInput->m_ControllersInput[0].m_MoveAxisY + gameInput->m_KeyboardMouseController.m_MoveAxisY};
+
+    if (LengthSq(playerAcceleration) > 1.0f)
+    {
+        playerAcceleration = GetNormilized(playerAcceleration);
+    }
 
     const float playerSpeed = 20.0f;
     playerAcceleration *= playerSpeed;
-    playerAcceleration += -2.0f * gameState->m_Player.m_Velocity;
+    playerAcceleration += -2.5f * gameState->m_Player.m_Velocity;
 
     gameState->m_Player.m_Pos
         = 0.5f * playerAcceleration * dt * dt

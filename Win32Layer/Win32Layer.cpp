@@ -128,7 +128,7 @@ float Win32GetXInputStickValue(SHORT inValue, SHORT deadZone)
 {
     const SHORT valueDeadZoned = static_cast<int>(inValue > deadZone || inValue < -deadZone) * inValue;
 
-    return ((static_cast<float>(valueDeadZoned) + 32768.0f) / 65535.0f) * 2.0f - 1.0f;
+    return ((static_cast<float>(valueDeadZoned) + 32768.0f) / 65536.0f) * 2.0f - 1.0f;
 }
 
 void UpdateAndRenderStub(float dt, GameMemory* gameMemory, GameInput* gameInput, EngineOffScreenBuffer* outBuffer)
