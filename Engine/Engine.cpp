@@ -1,7 +1,6 @@
 #include <cstdint>
 #include <Engine/Engine.h>
 #include <Engine/Engine_platform.h>
-#include <Rendering/SimpleRenders.h>
 #include <Math/Vector2.hpp>
 
 GameState* GetGameState(GameMemory* fromMem)
@@ -11,25 +10,41 @@ GameState* GetGameState(GameMemory* fromMem)
 
 void Initialize(GameMemory* gameMemory)
 {
+    assert(sizeof(GameState) <= gameMemory->m_PersistentMemorySize);
     GameState* gameState = GetGameState(gameMemory);
 
     uint8_t* linearAllocatorBase = (uint8_t*)gameMemory->m_PersistentStorage + sizeof(GameState);
     uint64_t linearAllocatorTotalMem = gameMemory->m_PersistentMemorySize - sizeof(GameState);
     gameState->m_LinearAllocator.Initialize(linearAllocatorBase, linearAllocatorTotalMem);
+    InitializeEntiityStorage(&gameState->m_World.m_Entities);
 
-    gameState->m_Camera.m_Pos = { -48.0f, -27.0f };
-
-    gameState->m_Player.m_Pos = { 0, 0 };
-    gameState->m_Player.m_Velocity = {};
-
-    gameState->m_Obstacle = { 10, 10 };
-
+    gameState->m_World.m_Camera.m_Pos = { -48.0f, -27.0f };
+    Entity* player = AddEntity(&gameState->m_World.m_Entities);
+    
+    player->m_Pos = { 0, 0 };
+    player->m_Velocity = {};
+    player->m_Size = { 3, 3 };
+    player->m_Color = { 1, 0, 0};
+    gameState->m_ControlledEntityId = player->m_Id;
+    
+    Vector2 initObsPos = { 10, 10 };
+    for (uint32_t i = 0; i < 100; ++i)
+    {
+        for (uint32_t j = 0; j < 100; ++j)
+        {
+            Entity* obstacle = AddEntity(&gameState->m_World.m_Entities);
+            obstacle->m_Pos = initObsPos + Vector2{ i * 20.0f, j * 15.0f };
+            obstacle->m_Velocity = {};
+            obstacle->m_Size = { (float)((i + 5) % 5) + 1.0f, (float)((j + 5) % 5)+ 1.0f };
+            obstacle->m_Color = { 1, 1, 0 };
+        }
+    }
 }
 
 void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, EngineOffScreenBuffer* outBuffer)
 {
     GameState* gameState = GetGameState(gameMemory);
-
+    World* world = &gameState->m_World;
     Vector2 playerAcceleration = {
         gameInput->m_ControllersInput[0].m_MoveAxisX + gameInput->m_KeyboardMouseController.m_MoveAxisX,
         gameInput->m_ControllersInput[0].m_MoveAxisY + gameInput->m_KeyboardMouseController.m_MoveAxisY};
@@ -39,61 +54,40 @@ void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, Eng
         playerAcceleration = GetNormilized(playerAcceleration);
     }
 
-    const float playerSpeed = 20.0f;
+    Entity* controlledEntity = GetEntity(&world->m_Entities, gameState->m_ControlledEntityId);
+
+    const float playerSpeed = 100.0f;
     playerAcceleration *= playerSpeed;
-    playerAcceleration += -2.5f * gameState->m_Player.m_Velocity;
+    playerAcceleration += -1.5f * controlledEntity->m_Velocity;
 
-    gameState->m_Player.m_Pos
-        = 0.5f * playerAcceleration * dt * dt
-        + gameState->m_Player.m_Velocity * dt
-        + gameState->m_Player.m_Pos;
+    controlledEntity->m_Pos
+        += 0.5f * playerAcceleration * dt * dt
+        + controlledEntity->m_Velocity * dt;
 
-    gameState->m_Player.m_Velocity += playerAcceleration * dt;
+    controlledEntity->m_Velocity += playerAcceleration * dt;
+
+    world->m_Camera.m_Pos = controlledEntity->m_Pos;
 
     ClearBuffer(outBuffer, Color{ 0.1f, 0.1f, 0.1f });
-
-    Vector2 playerPosCameraSpace = gameState->m_Player.m_Pos - gameState->m_Camera.m_Pos;
-    if (playerPosCameraSpace.x > 96.0f)
-    {
-        gameState->m_Camera.m_Pos.x += 96.0f;
-    }
-    else if (playerPosCameraSpace.x < -0.0f)
-    {
-        gameState->m_Camera.m_Pos.x -= 96.0f;
-    }
-    if (playerPosCameraSpace.y > 54.f)
-    {
-        gameState->m_Camera.m_Pos.y += 54.0f;
-    }
-    else if (playerPosCameraSpace.y < 0.0f)
-    {
-        gameState->m_Camera.m_Pos.y -= 54.0f;
-    }
     
+    for (uint32_t entityIndex = 0; entityIndex < world->m_Entities.m_NumEntities; ++entityIndex)
     {
-        Vector2 obstaclePosCameraSpace = gameState->m_Obstacle - gameState->m_Camera.m_Pos;
+        Entity* entity = world->m_Entities.m_Entities + entityIndex;
+        Vector2 worldObjectPosCameraSpace = entity->m_Pos - world->m_Camera.m_Pos;
 
-        Vector2 obsacleLeftBottom{ -3.0f, -3.0f };
-        Vector2 obstacleRightUp{ 3.0f, 3.0f };
-        obsacleLeftBottom += obstaclePosCameraSpace;
-        obstacleRightUp += obstaclePosCameraSpace;
+        Vector2 worldObjectLeftBottom = worldObjectPosCameraSpace;
+        Vector2 worldObjectRightUp = worldObjectPosCameraSpace;
 
-        obsacleLeftBottom *= PIXELS_IN_METRE;
-        obstacleRightUp *= PIXELS_IN_METRE;
+        worldObjectLeftBottom -= entity->m_Size * 0.5f;
+        worldObjectRightUp += entity->m_Size * 0.5f;
 
-        DrawRectangle(outBuffer, obsacleLeftBottom, obstacleRightUp, Color{ 0.0f, 1.0f, 0.0f });
-    }
+        worldObjectLeftBottom *= PIXELS_IN_METRE;
+        worldObjectRightUp *= PIXELS_IN_METRE;
 
-    {
-        playerPosCameraSpace = gameState->m_Player.m_Pos - gameState->m_Camera.m_Pos;
-        Vector2 playerLeftBottom{ -1.0f, -1.0f };
-        Vector2 playerRightUp{ 1.0f, 1.0f };
-        playerLeftBottom += playerPosCameraSpace;
-        playerRightUp += playerPosCameraSpace;
+        Vector2 screenOffset = { outBuffer->m_Width * 0.5f, outBuffer->m_Height * 0.5f };
+        worldObjectLeftBottom += screenOffset;
+        worldObjectRightUp += screenOffset;
 
-        playerLeftBottom *= PIXELS_IN_METRE;
-        playerRightUp *= PIXELS_IN_METRE;
-
-        DrawRectangle(outBuffer, playerLeftBottom, playerRightUp, Color{ 1.0f, 0.0f, 0.0f });
+        DrawRectangle(outBuffer, worldObjectLeftBottom, worldObjectRightUp, entity->m_Color);
     }
 }

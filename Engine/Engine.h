@@ -1,7 +1,9 @@
 #pragma once
 
 #include <Engine/Allocators.h>
+#include <Engine/Entity.h>
 #include <Math/Vector2.hpp>
+#include <Rendering/SimpleRenders.h>
 
 constexpr float PIXELS_IN_METRE = 10.0f;
 
@@ -10,16 +12,16 @@ struct Camera
     Vector2 m_Pos;
 };
 
-struct Player
+struct World
 {
-    Vector2 m_Pos;
-    Vector2 m_Velocity;
+    Camera m_Camera;
+    EntityStorage m_Entities;
 };
 
 struct GameState
 {
     LinearAllocator m_LinearAllocator;
-    Camera m_Camera;
-    Player m_Player;
-    Vector2 m_Obstacle;
+
+    World m_World;
+    EntityId m_ControlledEntityId;
 };
