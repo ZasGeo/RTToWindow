@@ -5,10 +5,17 @@
 
 struct Vector2
 {
-    float x;
-    float y;
+    union
+    {
+        struct
+        {
+            float x;
+            float y;
+        };
+        float elems[2];
+    };
 
-    float& operator[](int index) { return (&x)[index]; }
+    float& operator[](int index) { return elems[index]; }
 };
 
 inline Vector2 operator+(Vector2 lhs, Vector2 rhs)

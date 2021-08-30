@@ -33,7 +33,7 @@ void Initialize(GameMemory* gameMemory)
         for (uint32_t j = 0; j < 100; ++j)
         {
             Entity* obstacle = AddEntity(&gameState->m_World.m_Entities);
-            obstacle->m_Pos = initObsPos + Vector2{ i * 20.0f, j * 15.0f };
+            obstacle->m_Pos.xy = initObsPos + Vector2{ i * 20.0f, j * 15.0f };
             obstacle->m_Velocity = {};
             obstacle->m_Size = { (float)((i + 5) % 5) + 1.0f, (float)((j + 5) % 5)+ 1.0f };
             obstacle->m_Color = { 1, 1, 0 };
@@ -45,9 +45,11 @@ void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, Eng
 {
     GameState* gameState = GetGameState(gameMemory);
     World* world = &gameState->m_World;
-    Vector2 playerAcceleration = {
+    Vector3 playerAcceleration = {
         gameInput->m_ControllersInput[0].m_MoveAxisX + gameInput->m_KeyboardMouseController.m_MoveAxisX,
-        gameInput->m_ControllersInput[0].m_MoveAxisY + gameInput->m_KeyboardMouseController.m_MoveAxisY};
+        gameInput->m_ControllersInput[0].m_MoveAxisY + gameInput->m_KeyboardMouseController.m_MoveAxisY,
+        0.0f
+    };
 
     if (LengthSq(playerAcceleration) > 1.0f)
     {
@@ -73,13 +75,13 @@ void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, Eng
     for (uint32_t entityIndex = 0; entityIndex < world->m_Entities.m_NumEntities; ++entityIndex)
     {
         Entity* entity = world->m_Entities.m_Entities + entityIndex;
-        Vector2 worldObjectPosCameraSpace = entity->m_Pos - world->m_Camera.m_Pos;
+        Vector2 worldObjectPosCameraSpace = (entity->m_Pos - world->m_Camera.m_Pos).xy;
 
         Vector2 worldObjectLeftBottom = worldObjectPosCameraSpace;
         Vector2 worldObjectRightUp = worldObjectPosCameraSpace;
 
-        worldObjectLeftBottom -= entity->m_Size * 0.5f;
-        worldObjectRightUp += entity->m_Size * 0.5f;
+        worldObjectLeftBottom -= entity->m_Size.xy * 0.5f;
+        worldObjectRightUp += entity->m_Size.xy * 0.5f;
 
         worldObjectLeftBottom *= PIXELS_IN_METRE;
         worldObjectRightUp *= PIXELS_IN_METRE;

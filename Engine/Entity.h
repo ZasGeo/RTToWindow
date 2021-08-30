@@ -1,8 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <Math/Vector2.hpp>
-#include <Rendering/SimpleRenders.h>
+#include <Math/Vector4.hpp>
 
 constexpr uint32_t MAX_ENTITIES_NUM = 15000;
 
@@ -20,10 +19,10 @@ struct Entity
    EntityId m_Id;
 
    //payload
-   Color m_Color;
-   Vector2 m_Pos;
-   Vector2 m_Velocity;
-   Vector2 m_Size;
+   Vector4 m_Color;
+   Vector3 m_Pos;
+   Vector3 m_Velocity;
+   Vector3 m_Size;
 };
 
 struct EntityLookUpEntry

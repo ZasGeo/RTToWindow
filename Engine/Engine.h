@@ -2,14 +2,14 @@
 
 #include <Engine/Allocators.h>
 #include <Engine/Entity.h>
-#include <Math/Vector2.hpp>
+#include <Math/Vector3.hpp>
 #include <Rendering/SimpleRenders.h>
 
 constexpr float PIXELS_IN_METRE = 10.0f;
 
 struct Camera
 {
-    Vector2 m_Pos;
+    Vector3 m_Pos;
 };
 
 struct World

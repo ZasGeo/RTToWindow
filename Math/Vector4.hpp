@@ -2,15 +2,42 @@
 
 #include <cassert>
 #include <Math/Math.hpp>
+#include <Math/Vector2.hpp>
+#include <Math/Vector3.hpp>
 
 struct Vector4
 {
-    float x;
-    float y;
-    float z;
-    float w;
+    union
+    {
+        struct
+        {
+            float x;
+            float y;
+            float z;
+            float w;
+        };
+        struct
+        {
+            Vector3 xyz;
+            float w;
+        };
+        struct
+        {
+            float r;
+            float g;
+            float b;
+            float a;
+        };
+        struct
+        {
+            Vector3 rgb;
+            float a;
+        };
 
-    float& operator[](int index) { return (&x)[index]; }
+        float elems[4];
+    };
+
+    float& operator[](int index) { return elems[index]; }
 };
 
 inline Vector4 operator+(Vector4 lhs, Vector4 rhs)

@@ -4,9 +4,9 @@
 
 uint32_t ColorToColorCode(Color color)
 {
-    return ((RoundFloatUint32(color.R * 255.0f) << 16) |
-            (RoundFloatUint32(color.G * 255.0f) << 8) |
-            (RoundFloatUint32(color.B * 255.0f) << 0));
+    return ((RoundFloatUint32(color.r * 255.0f) << 16) |
+            (RoundFloatUint32(color.g * 255.0f) << 8) |
+            (RoundFloatUint32(color.b * 255.0f) << 0));
 }
 
 void RenderGradient(EngineOffScreenBuffer* outBuffer)
