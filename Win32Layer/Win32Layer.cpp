@@ -64,8 +64,7 @@ void Win32ResizeOffScreenBuffer(Win32OffScreenBuffer* buffer, const int width, c
 
     buffer->m_Width = width;
     buffer->m_Height = height;
-    buffer->m_BytesPerPixel = 4;
-    buffer->m_Pitch = width * buffer->m_BytesPerPixel;
+    buffer->m_Pitch = width * BUFFER_BYTES_PER_PIXEL;
     buffer->m_AspectRatio = static_cast<float>(width) / height;
 
     buffer->m_Info.bmiHeader.biSize = sizeof(buffer->m_Info.bmiHeader);
@@ -75,7 +74,7 @@ void Win32ResizeOffScreenBuffer(Win32OffScreenBuffer* buffer, const int width, c
     buffer->m_Info.bmiHeader.biBitCount = 32;
     buffer->m_Info.bmiHeader.biCompression = BI_RGB;
 
-    const int bitMapSize = buffer->m_Width * buffer->m_Height * buffer->m_BytesPerPixel;
+    const int bitMapSize = buffer->m_Width * buffer->m_Height * BUFFER_BYTES_PER_PIXEL;
     buffer->m_Memory = VirtualAlloc(0, bitMapSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 }
 
@@ -405,7 +404,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         offscreenBuffer.m_Memory = g_BackBuffer.m_Memory;
         offscreenBuffer.m_Width = g_BackBuffer.m_Width;
         offscreenBuffer.m_Height = g_BackBuffer.m_Height;
-        offscreenBuffer.m_BytesPerPixel = g_BackBuffer.m_BytesPerPixel;
         offscreenBuffer.m_Pitch = g_BackBuffer.m_Pitch;
         offscreenBuffer.m_AspectRatio = g_BackBuffer.m_AspectRatio;
         gameCode.UpdateAndRender(dt, &gameMemory, newInput, &offscreenBuffer);

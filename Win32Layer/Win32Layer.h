@@ -8,7 +8,6 @@ struct Win32OffScreenBuffer
     void* m_Memory;
     uint32_t m_Width;
     uint32_t m_Height;
-    uint32_t m_BytesPerPixel;
     uint32_t m_Pitch;
     float m_AspectRatio;
 };

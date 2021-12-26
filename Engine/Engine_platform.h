@@ -7,14 +7,14 @@
 #define GIGABYTES(Value) (MEGABYTES(Value) * 1024)
 #define TERABYTES(Value) (GIGABYTES(Value) * 1024)
 
-constexpr int MaxGamePadControllersNum = 4;
+constexpr uint32_t MaxGamePadControllersNum = 4;
+constexpr uint32_t BUFFER_BYTES_PER_PIXEL = 4;
 
 struct EngineOffScreenBuffer
 {
     void* m_Memory;
     uint32_t m_Width;
     uint32_t m_Height;
-    uint32_t m_BytesPerPixel;
     uint32_t m_Pitch;
     float m_AspectRatio;
 };
@@ -47,7 +47,6 @@ struct GameControllerInput
     ButtonState m_Right;
     ButtonState m_LeftShoulder;
     ButtonState m_RightShoulder;
-
 };
 
 struct GameInput
@@ -57,7 +56,7 @@ struct GameInput
 };
 
 typedef void InitializeSignature(GameMemory* gameMemory);
-extern "C"  void Initialize(GameMemory * gameMemory);
+extern "C"  void Initialize(GameMemory* gameMemory);
 
 typedef void UpdateAndRenderSignature(float dt, GameMemory* gameMemory, GameInput* gameInput, EngineOffScreenBuffer* outBuffer);
-extern "C" void UpdateAndRender(float dt, GameMemory * gameMemory, GameInput * gameInput, EngineOffScreenBuffer * outBuffer);
+extern "C" void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, EngineOffScreenBuffer* outBuffer);

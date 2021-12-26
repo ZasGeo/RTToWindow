@@ -46,7 +46,7 @@ void DrawRectangle(EngineOffScreenBuffer* outBuffer, Vector2 leftBottom, Vector2
 {
     const int32_t width = outBuffer->m_Width;
     const int32_t height = outBuffer->m_Height;
-    const int32_t pitch = width * outBuffer->m_BytesPerPixel;
+    const int32_t pitch = outBuffer->m_Pitch;
     const uint32_t colorCode = ColorToColorCode(color);
 
     const int32_t minX = GetMax(FloorFloatInt32(leftBottom.x), 0);
