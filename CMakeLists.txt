@@ -15,6 +15,11 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -opt:ref") #remove shit fr
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -opt:ref") #removeshit from dll
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+file(COPY ${CMAKE_SOURCE_DIR}/Assets/ DESTINATION ${CMAKE_BINARY_DIR}/bin/Assets/)
+#message(SEND_ERROR "foo include dire: ${CMAKE_BINARY_DIR}")
+#message(SEND_ERROR "foo include dir: ${CMAKE_SOURCE_DIR}")
+
 # Include sub-projects.
 add_subdirectory ("Win32Layer")
 add_subdirectory ("Engine")

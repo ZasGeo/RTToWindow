@@ -49,3 +49,32 @@ inline BitTestRes FindLeastSignificantBit(uint32_t value)
 #endif
     return result;
 }
+
+struct BitScanResult
+{
+    bool Found;
+    uint32_t Index;
+};
+
+inline BitScanResult FindLeastSignificantSetBit(uint32_t value)
+{
+    BitScanResult result = {};
+
+#if COMPILER_MSVC
+    result.Found = _BitScanForward((unsigned long*)&result.Index, value);
+#else
+    for (uint32_t test = 0;
+        test < 32;
+        ++test)
+    {
+        if (value & (1 << test))
+        {
+            result.Index = test;
+            result.Found = true;
+            break;
+        }
+    }
+#endif
+
+    return result;
+}

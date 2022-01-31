@@ -162,3 +162,29 @@ inline Vector4 GetNormilized(Vector4 vec)
     Vector4 result = EqualWithEpsilion(len, 0.0f) ? vec : vec / len;
     return result;
 }
+
+inline Vector4 SRGB255ToLinear01(Vector4 color)
+{
+    Vector4 result;
+
+    float inv255 = 1.0f / 255.0f;
+
+    result.r = Square(inv255 * color.r);
+    result.g = Square(inv255 * color.g);
+    result.b = Square(inv255 * color.b);
+    result.a = inv255 * color.a;
+
+    return result;
+}
+
+inline Vector4 Linear01ToSRGB255(Vector4 color)
+{
+    Vector4 result;
+
+    result.r = 255.0f * SquareRoot(color.r);
+    result.g = 255.0f * SquareRoot(color.g);
+    result.b = 255.0f * SquareRoot(color.b);
+    result.a = 255.0f * color.a;
+
+    return result;
+}

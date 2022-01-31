@@ -1,7 +1,12 @@
 #include <cstdint>
 #include <Engine/Engine.h>
 #include <Engine/Engine_platform.h>
+#include <Engine/Bitmap.h>
 #include <Math/Vector2.hpp>
+
+GameMemory* g_DebugGlobalMemory;
+
+
 
 GameState* GetGameState(GameMemory* fromMem)
 {
@@ -10,6 +15,8 @@ GameState* GetGameState(GameMemory* fromMem)
 
 void Initialize(GameMemory* gameMemory)
 {
+    g_DebugGlobalMemory = gameMemory;
+
     assert(sizeof(GameState) <= gameMemory->m_PersistentMemorySize);
     GameState* gameState = GetGameState(gameMemory);
 
@@ -39,10 +46,14 @@ void Initialize(GameMemory* gameMemory)
             obstacle->m_Color = { 1, 1, 0 };
         }
     }
+
+    gameState->m_TestBMP = DEBUGLoadBMP(gameMemory->m_DEBUGReadFile, "Assets/TestRed.bmp");
 }
 
 void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, EngineOffScreenBuffer* outBuffer)
 {
+    g_DebugGlobalMemory = gameMemory;
+
     GameState* gameState = GetGameState(gameMemory);
     World* world = &gameState->m_World;
     Vector3 playerAcceleration = {
@@ -92,4 +103,22 @@ void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, Eng
 
         DrawRectangle(outBuffer, worldObjectLeftBottom, worldObjectRightUp, entity->m_Color);
     }
+
+    static float angle = 0.0f;
+    static float offsetX = 0.0f;
+    Vector2 xAxis = Vector2{ cosf(angle), sinf(angle) };
+    Vector2 yAxis = { -xAxis.y, xAxis.x };
+    xAxis *= 256.0f;
+    yAxis *= 256.0f;
+
+
+    Vector2 origin{ 425.0f, 200.0f };
+    origin.x += offsetX;
+    //origin -= yAxis * 0.5f;
+    //origin -= xAxis * 0.5f;
+
+    DrawBitmap(outBuffer, &gameState->m_TestBMP, origin, xAxis, yAxis);
+
+    //angle += 0.01f;
+    offsetX += 5.0f * dt;
 }

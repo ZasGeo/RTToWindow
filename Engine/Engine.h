@@ -4,6 +4,7 @@
 #include <Engine/Entity.h>
 #include <Math/Vector3.hpp>
 #include <Rendering/SimpleRenders.h>
+#include <Engine/Bitmap.h>
 
 constexpr float PIXELS_IN_METRE = 10.0f;
 
@@ -24,4 +25,6 @@ struct GameState
 
     World m_World;
     EntityId m_ControlledEntityId;
+
+    LoadedBitmap m_TestBMP;
 };

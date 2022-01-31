@@ -177,6 +177,42 @@ Win32GameCode Win32LoadGameCode()
     return result;
 }
 
+DebugReadFileResult DEBUGWin32ReadEntireFile(char* fileName)
+{
+    DebugReadFileResult Result = {};
+
+    HANDLE FileHandle = CreateFileA(fileName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    if (FileHandle != INVALID_HANDLE_VALUE)
+    {
+        LARGE_INTEGER FileSize;
+        if (GetFileSizeEx(FileHandle, &FileSize))
+        {
+            if (FileSize.QuadPart <= 0xFFFFFFFF)
+            {
+                uint32_t FileSize32 = uint32_t(FileSize.QuadPart);
+                Result.m_Content = VirtualAlloc(0, FileSize32, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+                if (Result.m_Content)
+                {
+                    DWORD BytesRead;
+                    if (ReadFile(FileHandle, Result.m_Content, FileSize32, &BytesRead, 0) &&
+                        (FileSize32 == BytesRead))
+                    {
+                        Result.m_Size = FileSize32;
+                    }
+                    else
+                    {
+                        //YOLO, this function to be deleted
+                        Result.m_Content = 0;
+                    }
+                }
+            }
+            CloseHandle(FileHandle);
+        }
+    }
+
+    return(Result);
+}
+
 void Win32UnloadGameCode(Win32GameCode* gameCode)
 {
     if (gameCode->m_Module != NULL)
@@ -210,7 +246,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     }
     return result;
 }
-
+#include <intrin.h>
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     WNDCLASS wndClass = {};
@@ -271,6 +307,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     gameMemory.m_TransientMemorySize = GIGABYTES(1ull);
     gameMemory.m_PersistentStorage = VirtualAlloc(gameMemoryStartAdress, gameMemory.m_PersistentMemorySize + gameMemory.m_TransientMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     gameMemory.m_TransientStorage = static_cast<char*>(gameMemory.m_PersistentStorage) + gameMemory.m_PersistentMemorySize;
+    gameMemory.m_DEBUGReadFile = DEBUGWin32ReadEntireFile;
 
     if (gameMemory.m_PersistentStorage == NULL)
     {
@@ -407,6 +444,29 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         offscreenBuffer.m_Pitch = g_BackBuffer.m_Pitch;
         offscreenBuffer.m_AspectRatio = g_BackBuffer.m_AspectRatio;
         gameCode.UpdateAndRender(dt, &gameMemory, newInput, &offscreenBuffer);
+        {
+            OutputDebugStringA("DEBUG CYCLE COUNTS:\n");
+            for (uint32_t CounterIndex = 0;
+                CounterIndex < DebugCycleCounter_Count;
+                ++CounterIndex)
+            {
+                DebugCycleCounter& Counter = gameMemory.m_Counters[CounterIndex];
+
+                if (Counter.HitCount)
+                {
+                    char TextBuffer[256];
+                    _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                        "  %d: %I64ucy %uh %I64ucy/h\n",
+                        CounterIndex,
+                        Counter.CycleCount,
+                        Counter.HitCount,
+                        Counter.CycleCount / Counter.HitCount);
+                    OutputDebugStringA(TextBuffer);
+                    Counter.HitCount = 0;
+                    Counter.CycleCount = 0;
+                }
+            }
+        }
 
         Win32WindowDimension dimension =  Win32GetWinDimension(windowHandle);     
         Win32PresentBufferToWindow(g_BackBuffer, deviceContext, dimension.m_Width, dimension.m_Height);
@@ -423,11 +483,14 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         uint64_t cyclesElapsed = endCycleCount - lastCycleCount;
         lastCycleCount = endCycleCount;
  
+#if 0
+
         const double megaCyclesPerFrame = static_cast<double>(cyclesElapsed) / (1000.0 * 1000.0);
         const double msPerFrame = 1000.0 * dt;
         char fpsBuffer[256];
         _snprintf_s(fpsBuffer, sizeof(fpsBuffer), "%.03fms/f,  %.02fmc/f\n", msPerFrame, megaCyclesPerFrame);
         OutputDebugStringA(fpsBuffer);
+#endif
     }
 
     //no, you don't need to clear any resource here
