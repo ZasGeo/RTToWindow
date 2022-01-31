@@ -315,6 +315,7 @@ void DrawBitmap(EngineOffScreenBuffer* outBuffer, LoadedBitmap* bitmap, Vector2 
     __m256i texWidth8x = _mm256_set1_epi32(bitmap->Width);
 
     __m256i zero = _mm256_set1_epi32(0);
+    __m256i four = _mm256_set1_epi32(4);
     __m256 zeroReal = _mm256_set1_ps(0.0f);
     __m256 oneReal = _mm256_set1_ps(1.0f);
     __m256 Octo8x = _mm256_set1_ps(8.0f);
@@ -347,6 +348,7 @@ void DrawBitmap(EngineOffScreenBuffer* outBuffer, LoadedBitmap* bitmap, Vector2 
     xMax = xMaxAdjusted;
 
     int* textureMemory = (int*)bitmap->Memory;
+    uint32_t texturePitch = bitmap->Pitch;
 
     uint8_t* row = (uint8_t*)outBuffer->m_Memory + yMin * outBuffer->m_Pitch + xMin * 4;
 
@@ -393,16 +395,78 @@ void DrawBitmap(EngineOffScreenBuffer* outBuffer, LoadedBitmap* bitmap, Vector2 
 
             fetchCoumpond = _mm256_add_epi32(fetchX, fetchCoumpond);
 
-            BEGIN_TIMED_BLOCK(DrawBitmapFetch);
-
+            //BEGIN_TIMED_BLOCK(DrawBitmapFetch);
+#if 0
             __m256i sampleA = _mm256_i32gather_epi32(textureMemory, fetchCoumpond, sizeof(int32_t));
             __m256i sampleB = _mm256_i32gather_epi32(textureMemory + 1, fetchCoumpond, sizeof(int32_t));
             __m256i sampleC = _mm256_i32gather_epi32(textureMemory + texHeight, fetchCoumpond, sizeof(int32_t));
             __m256i sampleD = _mm256_i32gather_epi32(textureMemory + texHeight + 1, fetchCoumpond, sizeof(int32_t));
 
-            END_TIMED_BLOCK(DrawBitmapFetch);
+#else
+            fetchCoumpond = _mm256_mullo_epi16(fetchCoumpond, four);
+            uint32_t fetch0 = fetchCoumpond.m256i_u32[0];
+            uint32_t fetch1 = fetchCoumpond.m256i_u32[1];
+            uint32_t fetch2 = fetchCoumpond.m256i_u32[2];
+            uint32_t fetch3 = fetchCoumpond.m256i_u32[3];
+            uint32_t fetch4 = fetchCoumpond.m256i_u32[4];
+            uint32_t fetch5 = fetchCoumpond.m256i_u32[5];
+            uint32_t fetch6 = fetchCoumpond.m256i_u32[6];
+            uint32_t fetch7 = fetchCoumpond.m256i_u32[7];
 
-            BEGIN_TIMED_BLOCK(DrawBitmapCompute);
+
+            uint8_t* texelPtr0 = ((uint8_t*)textureMemory) + fetch0;
+            uint8_t* texelPtr1 = ((uint8_t*)textureMemory) + fetch1;
+            uint8_t* texelPtr2 = ((uint8_t*)textureMemory) + fetch2;
+            uint8_t* texelPtr3 = ((uint8_t*)textureMemory) + fetch3;
+            uint8_t* texelPtr4 = ((uint8_t*)textureMemory) + fetch4;
+            uint8_t* texelPtr5 = ((uint8_t*)textureMemory) + fetch5;
+            uint8_t* texelPtr6 = ((uint8_t*)textureMemory) + fetch6;
+            uint8_t* texelPtr7 = ((uint8_t*)textureMemory) + fetch7;
+
+            __m256i sampleA = _mm256_setr_epi32(
+                *(uint32_t*)(texelPtr0),
+                *(uint32_t*)(texelPtr1),
+                *(uint32_t*)(texelPtr2),
+                *(uint32_t*)(texelPtr3),
+                *(uint32_t*)(texelPtr4),
+                *(uint32_t*)(texelPtr5),
+                *(uint32_t*)(texelPtr6),
+                *(uint32_t*)(texelPtr7));
+
+            __m256i sampleB = _mm256_setr_epi32(
+                *(uint32_t*)(texelPtr0 + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr1 + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr2 + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr3 + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr4 + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr5 + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr6 + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr7 + sizeof(uint32_t)));
+
+            __m256i sampleC = _mm256_setr_epi32(
+                *(uint32_t*)(texelPtr0 + texturePitch),
+                *(uint32_t*)(texelPtr1 + texturePitch),
+                *(uint32_t*)(texelPtr2 + texturePitch),
+                *(uint32_t*)(texelPtr3 + texturePitch),
+                *(uint32_t*)(texelPtr4 + texturePitch),
+                *(uint32_t*)(texelPtr5 + texturePitch),
+                *(uint32_t*)(texelPtr6 + texturePitch),
+                *(uint32_t*)(texelPtr7 + texturePitch));
+
+            __m256i sampleD = _mm256_setr_epi32(
+                *(uint32_t*)(texelPtr0 + texturePitch + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr1 + texturePitch + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr2 + texturePitch + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr3 + texturePitch + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr4 + texturePitch + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr5 + texturePitch + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr6 + texturePitch + sizeof(uint32_t)),
+                *(uint32_t*)(texelPtr7 + texturePitch + sizeof(uint32_t)));
+#endif
+
+            //END_TIMED_BLOCK(DrawBitmapFetch);
+
+            //BEGIN_TIMED_BLOCK(DrawBitmapCompute);
 
             //compute coefficient for bilinear blend
             __m256 fX = _mm256_sub_ps(textureX, _mm256_cvtepi32_ps(fetchX));
@@ -525,7 +589,7 @@ void DrawBitmap(EngineOffScreenBuffer* outBuffer, LoadedBitmap* bitmap, Vector2 
             pixel += 8;
             pixelPosX = _mm256_add_ps(pixelPosX, Octo8x);
 
-            END_TIMED_BLOCK(DrawBitmapCompute);
+           // END_TIMED_BLOCK(DrawBitmapCompute);
         }
         row += outBuffer->m_Pitch;
     }
@@ -703,12 +767,14 @@ void DrawBitmap(EngineOffScreenBuffer* Buffer, LoadedBitmap* Texture, Vector2 Or
                         _mm_slli_epi32(_mm_mulhi_epi16(FetchY_4x, TexturePitch_4x), 16));
                     __m128i Fetch_4x = _mm_add_epi32(FetchX_4x, FetchY_4x);
 
+
+                    //BEGIN_TIMED_BLOCK(DrawBitmapFetch);
+
                     int32_t Fetch0 = Mi(Fetch_4x, 0);
                     int32_t Fetch1 = Mi(Fetch_4x, 1);
                     int32_t Fetch2 = Mi(Fetch_4x, 2);
                     int32_t Fetch3 = Mi(Fetch_4x, 3);
 
-                    BEGIN_TIMED_BLOCK(DrawBitmapFetch);
 
                     uint8_t* TexelPtr0 = ((uint8_t*)TextureMemory) + Fetch0;
                     uint8_t* TexelPtr1 = ((uint8_t*)TextureMemory) + Fetch1;
@@ -735,9 +801,9 @@ void DrawBitmap(EngineOffScreenBuffer* Buffer, LoadedBitmap* Texture, Vector2 Or
                         *(uint32_t*)(TexelPtr2 + TexturePitch + sizeof(uint32_t)),
                         *(uint32_t*)(TexelPtr3 + TexturePitch + sizeof(uint32_t)));
 
-                    END_TIMED_BLOCK(DrawBitmapFetch);
+                    //END_TIMED_BLOCK(DrawBitmapFetch);
 
-                    BEGIN_TIMED_BLOCK(DrawBitmapCompute);
+                    //BEGIN_TIMED_BLOCK(DrawBitmapCompute);
 
                     // NOTE(casey): Unpack bilinear samples
                     __m128i TexelArb = _mm_and_si128(SampleA, MaskFF00FF);
@@ -849,7 +915,7 @@ void DrawBitmap(EngineOffScreenBuffer* Buffer, LoadedBitmap* Texture, Vector2 Or
                         _mm_andnot_si128(WriteMask, OriginalDest));
                     _mm_store_si128((__m128i*)Pixel, MaskedOut);
 
-                    END_TIMED_BLOCK(DrawBitmapCompute);
+                    //END_TIMED_BLOCK(DrawBitmapCompute);
                 }
 
                 PixelPx = _mm_add_ps(PixelPx, Four_4x);
