@@ -32,6 +32,7 @@ void Initialize(GameMemory* gameMemory)
     player->m_Velocity = {};
     player->m_Size = { 3, 3 };
     player->m_Color = { 1, 0, 0};
+    player->m_AngleRad = 0.0f;
     gameState->m_ControlledEntityId = player->m_Id;
     
     Vector2 initObsPos = { 10, 10 };
@@ -44,10 +45,11 @@ void Initialize(GameMemory* gameMemory)
             obstacle->m_Velocity = {};
             obstacle->m_Size = { (float)((i + 5) % 5) + 1.0f, (float)((j + 5) % 5)+ 1.0f };
             obstacle->m_Color = { 1, 1, 0 };
+            obstacle->m_AngleRad = (float)((i + j + 5) % 5) * 0.1f;
         }
     }
 
-    gameState->m_TestBMP = DEBUGLoadBMP(gameMemory->m_DEBUGReadFile, "Assets/TestRed.bmp");
+    gameState->m_TestBMP = DEBUGLoadBMP(gameMemory->m_DEBUGReadFile, "Assets/Test.bmp");
 }
 
 void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, EngineOffScreenBuffer* outBuffer)
@@ -88,6 +90,9 @@ void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, Eng
         Entity* entity = world->m_Entities.m_Entities + entityIndex;
         Vector2 worldObjectPosCameraSpace = (entity->m_Pos - world->m_Camera.m_Pos).xy;
 
+        Vector2 screenOffset = { outBuffer->m_Width * 0.5f, outBuffer->m_Height * 0.5f };
+#if 0
+
         Vector2 worldObjectLeftBottom = worldObjectPosCameraSpace;
         Vector2 worldObjectRightUp = worldObjectPosCameraSpace;
 
@@ -97,28 +102,25 @@ void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, Eng
         worldObjectLeftBottom *= PIXELS_IN_METRE;
         worldObjectRightUp *= PIXELS_IN_METRE;
 
-        Vector2 screenOffset = { outBuffer->m_Width * 0.5f, outBuffer->m_Height * 0.5f };
         worldObjectLeftBottom += screenOffset;
         worldObjectRightUp += screenOffset;
 
         DrawRectangle(outBuffer, worldObjectLeftBottom, worldObjectRightUp, entity->m_Color);
+#else
+        Vector2 origin = worldObjectPosCameraSpace;
+        origin *= PIXELS_IN_METRE;
+        origin += screenOffset;
+
+        Vector2 xAxis = Vector2{ cosf(entity->m_AngleRad), sinf(entity->m_AngleRad) };
+        Vector2 yAxis = { -xAxis.y, xAxis.x };
+
+        xAxis *= entity->m_Size.x * PIXELS_IN_METRE;
+        yAxis *= entity->m_Size.y * PIXELS_IN_METRE;
+
+        origin -= (yAxis * 0.5f);
+        origin -= (xAxis * 0.5f);
+
+        DrawBitmap(outBuffer, &gameState->m_TestBMP, origin, xAxis, yAxis);
+#endif
     }
-
-    static float angle = 0.0f;
-    static float offsetX = 0.0f;
-    Vector2 xAxis = Vector2{ cosf(angle), sinf(angle) };
-    Vector2 yAxis = { -xAxis.y, xAxis.x };
-    xAxis *= 256.0f;
-    yAxis *= 256.0f;
-
-
-    Vector2 origin{ 425.0f, 200.0f };
-    origin.x += offsetX;
-    //origin -= yAxis * 0.5f;
-    //origin -= xAxis * 0.5f;
-
-    DrawBitmap(outBuffer, &gameState->m_TestBMP, origin, xAxis, yAxis);
-
-    //angle += 0.01f;
-    offsetX += 5.0f * dt;
 }

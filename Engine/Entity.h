@@ -23,6 +23,7 @@ struct Entity
    Vector3 m_Pos;
    Vector3 m_Velocity;
    Vector3 m_Size;
+   float m_AngleRad;
 };
 
 struct EntityLookUpEntry
