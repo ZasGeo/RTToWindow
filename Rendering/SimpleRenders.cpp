@@ -271,8 +271,6 @@ void DrawBitmap(EngineOffScreenBuffer* outBuffer, LoadedBitmap* bitmap, Vector2 
 #elif 1
 void DrawBitmap(EngineOffScreenBuffer* outBuffer, LoadedBitmap* bitmap, Vector2 origin, Vector2 xAxis, Vector2 yAxis)
 {
-    BEGIN_TIMED_BLOCK(DrawBitmap)
-
     const int32_t widthMax = (int32_t)outBuffer->m_Width - 1;
     const int32_t heightMax = (int32_t)outBuffer->m_Height - 1;
 
@@ -353,6 +351,8 @@ void DrawBitmap(EngineOffScreenBuffer* outBuffer, LoadedBitmap* bitmap, Vector2 
         uint32_t texturePitch = bitmap->Pitch;
 
         uint8_t* row = (uint8_t*)outBuffer->m_Memory + yMin * outBuffer->m_Pitch + xMin * 4;
+
+        BEGIN_TIMED_BLOCK(DrawBitmap)
 
         for (int32_t y = yMin; y <= yMax; ++y)
         {
@@ -586,15 +586,12 @@ void DrawBitmap(EngineOffScreenBuffer* outBuffer, LoadedBitmap* bitmap, Vector2 
             }
             row += outBuffer->m_Pitch;
         }
+        END_TIMED_BLOCK(DrawBitmap)
     }
-
-    END_TIMED_BLOCK(DrawBitmap)
 }
-#elif 0 //only for comparing as it's Casey Muratori code
+#elif 1 //only for comparing as it's Casey Muratori code
 void DrawBitmap(EngineOffScreenBuffer* Buffer, LoadedBitmap* Texture, Vector2 Origin, Vector2 XAxis, Vector2 YAxis)
 {
-    BEGIN_TIMED_BLOCK(DrawBitmap);
-
     float XAxisLength = Length(XAxis);
     float YAxisLength = Length(YAxis);
 
@@ -701,6 +698,8 @@ void DrawBitmap(EngineOffScreenBuffer* Buffer, LoadedBitmap* Texture, Vector2 Or
 
         void* TextureMemory = Texture->Memory;
         int32_t TexturePitch = Texture->Pitch;
+
+        BEGIN_TIMED_BLOCK(DrawBitmap);
 
         for (int Y = yMin;
             Y < yMax;
@@ -927,9 +926,8 @@ void DrawBitmap(EngineOffScreenBuffer* Buffer, LoadedBitmap* Texture, Vector2 Or
 
             Row += Buffer->m_Pitch;
         }
-    }
-
-    END_TIMED_BLOCK(DrawBitmap);
+        END_TIMED_BLOCK(DrawBitmap);
+    }    
 }
 
 #elif 1

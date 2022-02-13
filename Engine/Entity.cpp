@@ -51,7 +51,8 @@ void InitializeEntiityStorage(EntityStorage* storage)
 Entity* AddEntity(EntityStorage* storage)
 {
     assert(storage->m_NumEntities < MAX_ENTITIES_NUM);
-   
+    assert(storage->m_NextEntityId.m_Value != 0);
+
     Entity* result = storage->m_Entities + storage->m_NumEntities;
     result->m_Id = storage->m_NextEntityId;
 

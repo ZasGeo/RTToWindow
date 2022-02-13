@@ -57,10 +57,8 @@ typedef DebugReadFileResult DEBUGReadEntireFileSignature(char* Filename);
 
 struct GameMemory
 {
-    uint64_t m_PersistentMemorySize;
-    void* m_PersistentStorage;
-    uint64_t m_TransientMemorySize;
-    void* m_TransientStorage;
+    uint64_t m_MemorySize;
+    void* m_Memory;
 
     DEBUGReadEntireFileSignature* m_DEBUGReadFile;
 

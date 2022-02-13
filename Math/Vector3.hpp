@@ -64,6 +64,15 @@ inline Vector3 operator*(Vector3 lhs, Vector3 rhs)
     return result;
 }
 
+inline Vector3 operator/(Vector3 lhs, Vector3 rhs)
+{
+    Vector3 result;
+    result.x = lhs.x / rhs.x;
+    result.y = lhs.y / rhs.y;
+    result.z = lhs.z / rhs.z;
+    return result;
+}
+
 inline Vector3 operator*(Vector3 vec, float scalar)
 {
     Vector3 result;

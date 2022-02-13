@@ -10,6 +10,11 @@ inline uint32_t RoundFloatUint32(float value)
     return static_cast<uint32_t>(value + 0.5f);
 }
 
+inline int32_t RoundFloatInt32(float value)
+{
+    return lroundf(value);
+}
+
 inline float FloorFloat(float value)
 {
     return floorf(value);
@@ -38,6 +43,11 @@ inline bool EqualWithEpsilion(float a, float b)
 inline float SquareRoot(float value)
 {
     return sqrtf(value);
+}
+
+inline float Abs(float value)
+{
+    return fabs(value);
 }
 
 template<typename valType>

@@ -1,30 +1,31 @@
 #pragma once
 
-#include <Engine/Allocators.h>
 #include <Engine/Entity.h>
+#include <Engine/Bitmap.h>
+#include <Engine/Memory.h>
+#include <Engine/World.h>
+#include <Engine/Simulation.h>
 #include <Math/Vector3.hpp>
 #include <Rendering/SimpleRenders.h>
-#include <Engine/Bitmap.h>
 
-constexpr float PIXELS_IN_METRE = 10.0f;
+constexpr float PIXELS_IN_METRE = 1.0f;
 
 struct Camera
 {
-    Vector3 m_Pos;
-};
-
-struct World
-{
-    Camera m_Camera;
-    EntityStorage m_Entities;
+    WorldPosition m_WorldPos;
+    Vector3 m_SimPos;
 };
 
 struct GameState
 {
-    LinearAllocator m_LinearAllocator;
+    World* m_CurrentWorld;
+    Simulation* m_Simulation;
 
-    World m_World;
+    Camera m_Camera;
+
     EntityId m_ControlledEntityId;
 
     LoadedBitmap m_TestBMP;
+
+    MemoryBlock m_TotalMemory;
 };

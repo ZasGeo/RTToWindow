@@ -6,46 +6,61 @@
 
 GameMemory* g_DebugGlobalMemory;
 
-
-
 GameState* GetGameState(GameMemory* fromMem)
 {
-    return static_cast<GameState*>(fromMem->m_PersistentStorage);
+    return static_cast<GameState*>(fromMem->m_Memory);
 }
 
 void Initialize(GameMemory* gameMemory)
 {
     g_DebugGlobalMemory = gameMemory;
 
-    assert(sizeof(GameState) <= gameMemory->m_PersistentMemorySize);
+    assert(sizeof(GameState) <= gameMemory->m_MemorySize);
     GameState* gameState = GetGameState(gameMemory);
 
-    uint8_t* linearAllocatorBase = (uint8_t*)gameMemory->m_PersistentStorage + sizeof(GameState);
-    uint64_t linearAllocatorTotalMem = gameMemory->m_PersistentMemorySize - sizeof(GameState);
-    gameState->m_LinearAllocator.Initialize(linearAllocatorBase, linearAllocatorTotalMem);
-    InitializeEntiityStorage(&gameState->m_World.m_Entities);
+    uint8_t* memoryBlockStart = (uint8_t*)gameMemory->m_Memory + sizeof(GameState);
+    uint8_t* memoryBlockEnd = (uint8_t*)gameMemory->m_Memory + gameMemory->m_MemorySize;
 
-    gameState->m_World.m_Camera.m_Pos = { -48.0f, -27.0f };
-    Entity* player = AddEntity(&gameState->m_World.m_Entities);
-    
-    player->m_Pos = { 0, 0 };
-    player->m_Velocity = {};
-    player->m_Size = { 3, 3 };
-    player->m_Color = { 1, 0, 0};
-    player->m_AngleRad = 0.0f;
-    gameState->m_ControlledEntityId = player->m_Id;
-    
+    memoryBlockStart += (uint64_t)memoryBlockStart % 8; //align to 8 byte, 8 picked randomly to not foghet that this comes unaligned
+
+    uint64_t memoryBlockTotalMemory = memoryBlockEnd - memoryBlockStart;
+
+    gameState->m_TotalMemory.Initialize(memoryBlockStart, memoryBlockTotalMemory);
+    gameState->m_CurrentWorld = CreateWorld(&gameState->m_TotalMemory, Vector3{ 500.0f, 500.0f, 500.0f });
+
+    gameState->m_Simulation = CreateSimulation(&gameState->m_TotalMemory, WorldPosition{}, Vector3{ 1100.0f, 1100.0f, 1000.0f });
+
+    gameState->m_Camera.m_SimPos = { 0.0f, 0.0f, 0.0f };
+    gameState->m_Camera.m_WorldPos = ZeroPos();
+
+    uint32_t persistentIndex = 0;
+
+    Entity player;
+    player.m_PersistentID.m_Value = ++persistentIndex;
+    player.m_SimPos = { 0, 0, 0 };
+    player.m_WorldPos = FitIntoChunk({ { 0, 0, 0 }, player.m_SimPos }, gameState->m_CurrentWorld->m_ChunkDimMeteres);
+    player.m_Velocity = {};
+    player.m_Size = { 3, 3 };
+    player.m_Color = { 1, 0, 0};
+    player.m_AngleRad = 0.0f;
+    PackEntity(gameState->m_CurrentWorld, &player, player.m_WorldPos);
+
     Vector2 initObsPos = { 10, 10 };
-    for (uint32_t i = 0; i < 100; ++i)
+    for (uint32_t i = 0; i < 2000; ++i)
     {
-        for (uint32_t j = 0; j < 100; ++j)
+        for (uint32_t j = 0; j < 2000; ++j)
         {
-            Entity* obstacle = AddEntity(&gameState->m_World.m_Entities);
-            obstacle->m_Pos.xy = initObsPos + Vector2{ i * 20.0f, j * 15.0f };
-            obstacle->m_Velocity = {};
-            obstacle->m_Size = { (float)((i + 5) % 5) + 1.0f, (float)((j + 5) % 5)+ 1.0f };
-            obstacle->m_Color = { 1, 1, 0 };
-            obstacle->m_AngleRad = (float)((i + j + 5) % 5) * 0.1f;
+            Entity obstacle;
+            obstacle.m_PersistentID.m_Value = ++persistentIndex;
+            obstacle.m_SimPos.xy = initObsPos + Vector2{ i * 50.0f, j * 50.0f };
+            obstacle.m_SimPos.z = 0.0f;
+            obstacle.m_Velocity = {};
+            obstacle.m_Size = { (float)((i + 5) % 5) + 1.0f, (float)((j + 5) % 5)+ 1.0f };
+            obstacle.m_Color = { 1, 1, 0 };
+            obstacle.m_AngleRad = (float)((i + j + 5) % 5) * 0.1f;
+            obstacle.m_WorldPos = FitIntoChunk({ { 0, 0, 0 }, obstacle.m_SimPos }, gameState->m_CurrentWorld->m_ChunkDimMeteres);
+
+            PackEntity(gameState->m_CurrentWorld, &obstacle, obstacle.m_WorldPos);
         }
     }
 
@@ -57,7 +72,11 @@ void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, Eng
     g_DebugGlobalMemory = gameMemory;
 
     GameState* gameState = GetGameState(gameMemory);
-    World* world = &gameState->m_World;
+    Simulation* simulation = gameState->m_Simulation;
+    World* world = gameState->m_CurrentWorld;
+
+    UpdateSimulation(simulation, world, gameState->m_Camera.m_WorldPos);
+
     Vector3 playerAcceleration = {
         gameInput->m_ControllersInput[0].m_MoveAxisX + gameInput->m_KeyboardMouseController.m_MoveAxisX,
         gameInput->m_ControllersInput[0].m_MoveAxisY + gameInput->m_KeyboardMouseController.m_MoveAxisY,
@@ -69,26 +88,43 @@ void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, Eng
         playerAcceleration = GetNormilized(playerAcceleration);
     }
 
-    Entity* controlledEntity = GetEntity(&world->m_Entities, gameState->m_ControlledEntityId);
+    //Entity* controlledEntity = GetEntity(&world->m_Entities, gameState->m_ControlledEntityId);
 
-    const float playerSpeed = 100.0f;
-    playerAcceleration *= playerSpeed;
-    playerAcceleration += -1.5f * controlledEntity->m_Velocity;
+    //const float playerSpeed = 100.0f;
+    //playerAcceleration *= playerSpeed;
+    //playerAcceleration += -1.5f * controlledEntity->m_Velocity;
 
-    controlledEntity->m_Pos
-        += 0.5f * playerAcceleration * dt * dt
-        + controlledEntity->m_Velocity * dt;
+    //controlledEntity->m_SimPos
+    //    += 0.5f * playerAcceleration * dt * dt
+    //    + controlledEntity->m_Velocity * dt;
 
-    controlledEntity->m_Velocity += playerAcceleration * dt;
+    //controlledEntity->m_Velocity += playerAcceleration * dt;
 
-    world->m_Camera.m_Pos = controlledEntity->m_Pos;
+    //gameState->m_Camera.m_SimPos = controlledEntity->m_SimPos;
 
     ClearBuffer(outBuffer, Color{ 0.1f, 0.1f, 0.1f });
-    
-    for (uint32_t entityIndex = 0; entityIndex < world->m_Entities.m_NumEntities; ++entityIndex)
+
+    gameState->m_Camera.m_SimPos = ToSimPos(gameState->m_Camera.m_WorldPos, simulation->m_Origin, world->m_ChunkDimMeteres);
+    static Vector3 offset = Vector3{ 0.25f, 0.25f, 0.0f };
+    if (simulation->m_Entities.m_NumEntities == 0)
     {
-        Entity* entity = world->m_Entities.m_Entities + entityIndex;
-        Vector2 worldObjectPosCameraSpace = (entity->m_Pos - world->m_Camera.m_Pos).xy;
+        offset = -1.0f * offset;
+    }
+    gameState->m_Camera.m_SimPos += offset;
+
+    gameState->m_Camera.m_WorldPos = ToWorldPos(simulation->m_Origin, gameState->m_Camera.m_SimPos, world->m_ChunkDimMeteres);   
+
+    for (uint32_t entityIndex = 0; entityIndex < simulation->m_Entities.m_NumEntities; ++entityIndex)
+    {
+        Entity* entity = simulation->m_Entities.m_Entities + entityIndex;
+
+        entity->m_SimPos = ToSimPos(entity->m_WorldPos, simulation->m_Origin, world->m_ChunkDimMeteres);
+
+        //do shit here in sim pos
+
+        entity->m_WorldPos = ToWorldPos(simulation->m_Origin, entity->m_SimPos, world->m_ChunkDimMeteres);
+
+        Vector2 worldObjectPosCameraSpace = (entity->m_SimPos - gameState->m_Camera.m_SimPos).xy;
 
         Vector2 screenOffset = { outBuffer->m_Width * 0.5f, outBuffer->m_Height * 0.5f };
 #if 0
@@ -123,4 +159,6 @@ void UpdateAndRender(float dt, GameMemory* gameMemory, GameInput* gameInput, Eng
         DrawBitmap(outBuffer, &gameState->m_TestBMP, origin, xAxis, yAxis);
 #endif
     }
+
+
 }

@@ -303,13 +303,11 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     GetSystemInfo(&inf);
 
     GameMemory gameMemory = {};
-    gameMemory.m_PersistentMemorySize = MEGABYTES(64ull);
-    gameMemory.m_TransientMemorySize = GIGABYTES(1ull);
-    gameMemory.m_PersistentStorage = VirtualAlloc(gameMemoryStartAdress, gameMemory.m_PersistentMemorySize + gameMemory.m_TransientMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    gameMemory.m_TransientStorage = static_cast<char*>(gameMemory.m_PersistentStorage) + gameMemory.m_PersistentMemorySize;
+    gameMemory.m_MemorySize = GIGABYTES(1);
+    gameMemory.m_Memory = VirtualAlloc(gameMemoryStartAdress, gameMemory.m_MemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     gameMemory.m_DEBUGReadFile = DEBUGWin32ReadEntireFile;
 
-    if (gameMemory.m_PersistentStorage == NULL)
+    if (gameMemory.m_MemorySize == NULL)
     {
         return EXIT_FAILURE;
     }
@@ -339,13 +337,15 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     g_Running = true;
     while (g_Running)
     {
+
+#ifdef INTERNAL_USAGE_BUILD
         FILETIME engineDLLWriteTime = Win32GetLastWriteTime("Engine.dll");
         if(CompareFileTime(&gameCode.m_LastWriteTime, &engineDLLWriteTime) == -1)
         {
             Win32UnloadGameCode(&gameCode);
             gameCode = Win32LoadGameCode();                      
         }
-
+#endif
         newInput->m_KeyboardMouseController = oldInput->m_KeyboardMouseController;
 
         MSG message;
@@ -444,6 +444,23 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         offscreenBuffer.m_Pitch = g_BackBuffer.m_Pitch;
         offscreenBuffer.m_AspectRatio = g_BackBuffer.m_AspectRatio;
         gameCode.UpdateAndRender(dt, &gameMemory, newInput, &offscreenBuffer);
+
+        Win32WindowDimension dimension =  Win32GetWinDimension(windowHandle);     
+        Win32PresentBufferToWindow(g_BackBuffer, deviceContext, dimension.m_Width, dimension.m_Height);
+
+        GameInput* tmpInput = oldInput;
+        oldInput = newInput;
+        newInput = tmpInput;
+
+        LARGE_INTEGER endCounter = Win32GetWallClock();;
+        dt = Win32GetSecondsElapsed(lastCounter, endCounter);
+        lastCounter = endCounter;
+ 
+        uint64_t endCycleCount = __rdtsc();
+        uint64_t cyclesElapsed = endCycleCount - lastCycleCount;
+        lastCycleCount = endCycleCount;
+ 
+#if 1
         {
             OutputDebugStringA("DEBUG CYCLE COUNTS:\n");
             for (uint32_t CounterIndex = 0;
@@ -467,23 +484,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                 }
             }
         }
-
-        Win32WindowDimension dimension =  Win32GetWinDimension(windowHandle);     
-        Win32PresentBufferToWindow(g_BackBuffer, deviceContext, dimension.m_Width, dimension.m_Height);
-
-        GameInput* tmpInput = oldInput;
-        oldInput = newInput;
-        newInput = tmpInput;
-
-        LARGE_INTEGER endCounter = Win32GetWallClock();;
-        dt = Win32GetSecondsElapsed(lastCounter, endCounter);
-        lastCounter = endCounter;
- 
-        uint64_t endCycleCount = __rdtsc();
-        uint64_t cyclesElapsed = endCycleCount - lastCycleCount;
-        lastCycleCount = endCycleCount;
- 
-#if 0
 
         const double megaCyclesPerFrame = static_cast<double>(cyclesElapsed) / (1000.0 * 1000.0);
         const double msPerFrame = 1000.0 * dt;
